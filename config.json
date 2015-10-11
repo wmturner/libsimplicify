@@ -1,0 +1,19 @@
+{
+  "build": {
+    "settings": {
+      "chef": [
+        "cheffile",
+        "cookbooks",
+        "roles",
+        "attributes"
+      ]
+    },
+    "type": [
+      "baremetal",
+      "docker"
+    ],
+    "provisioner": [
+      "chef"
+    ]
+  }
+}
