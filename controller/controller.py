@@ -49,8 +49,7 @@ class Provision:
 
 
 test_settings = { "cheffile": "http://controller1.simplicify.com/cheffiles/simplicify_test/Cheffile",
-                  "cookbooks": ["test1", "test2"] }
+                  "cookbooks": ["nginx"] }
 provision_test = Provision('test', '22')
 
 provision_test.build('baremetal', '5', 'chef', test_settings, 'testing123')
-print uuid.uuid1()
