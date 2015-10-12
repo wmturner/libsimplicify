@@ -3,7 +3,6 @@ import uuid
 import json
 import random
 import operator
-import threading
 
 
 NODE_TYPE="baremetal"
@@ -17,6 +16,7 @@ class worker:
         self.clusterPort = clusterPort
 
     def pollBuildQueue(self):
+        print "hello"
         vote = random.randrange(100, 1000, 3)
         queue = client.read('/build/{}'.format(NODE_TYPE), recursive = True, wait = True)
         
@@ -34,7 +34,11 @@ class worker:
          
         if winner==host:
             print "I win!" 
+        return 0
 
-Worker = worker("controller1.simplicify.com", "2379")
 
-Worker.pollBuildQueue()
+
+if __name__ == '__main__':
+    while True:
+        Worker = worker("controller1.simplicify.com", "2379")
+        Worker.pollBuildQueue()
