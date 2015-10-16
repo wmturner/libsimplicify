@@ -5,7 +5,8 @@
         "cheffile",
         "cookbooks",
         "roles",
-        "attributes"
+        "attributes",
+        "chroot_url"
       ]
     },
     "type": [
@@ -13,7 +14,8 @@
       "docker"
     ],
     "provisioner": [
-      "chef"
+      "chef",
+      "chroot"
     ]
   }
 }
