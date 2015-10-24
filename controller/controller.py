@@ -19,5 +19,8 @@ test_settings = { "cheffile": "http://controller1.simplicify.com/cheffiles/simpl
 #cmdObj.queue_build('baremetal', '5', 'chef', test_settings, 'testing123')
 #cmdObj.echo_build('baremetal', '4', '<3u evan')
 #cmdObj.rm_build('baremetal', '4')
-cmdObj.ls_bkts()
-
+#cmdObj.ls_bkts()
+#cmdObj.s3_ls_bkt('chroots')
+#cmdObj.s3_rm_bktkey('chroots','config')
+#cmdObj.s4_put_file('chroots', 'config', '/root/simplicify/controller/config.json')
+print cmdObj.s3_get_file_url('chroots', 'config')

@@ -173,11 +173,53 @@ class commands:
             
             return
         return
+
     
-    def ls_bkts(self):
+    def s3_ls_bkts(self):
+
         for bucket in self.client_s3.get_all_buckets():
             print "{name}\t{created}".format(
                     name = bucket.name,
                     created = bucket.creation_date,
             )
         return
+   
+    def s3_ls_bkt(self, bkt):
+
+        exists = self.client_s3.lookup(bkt)
+        if exists == None:
+            print "Bucket doesn't not exist, you're boned!"
+            return 1
+
+        bucket = self.client_s3.get_bucket(bkt)
+
+        for key in bucket.list():
+            print "{name}\t{size}\t{modified}".format(
+                    name = key.name,
+                    size = key.size,
+                    modified = key.last_modified,
+                    )
+
+    def s3_rm_bktkey(self, bkt, key):
+        bucket = self.client_s3.get_bucket(bkt)
+        bucket.delete_key(key)
+
+    def s3_put_file(self, bkt, key, file_path):
+
+        if not self.s3_ls_bkt(bkt) == 1:
+
+            bucket = self.client_s3.get_bucket(bkt)
+            
+            new_key = bucket.new_key(key)
+            new_key.set_contents_from_filename(file_path)
+            new_key.set_canned_acl('private')
+            
+            print new_key
+   
+    def s3_get_file_url(self, bkt, key):
+       
+        if not self.s3_ls_bkt(bkt) == 1:
+            bucket = self.client_s3.get_bucket(bkt)
+            req_key = bucket.get_key(key)
+            obj_url = req_key.generate_url(3600, query_auth=True, force_http=True)
+        return obj_url
