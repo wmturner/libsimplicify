@@ -7,7 +7,8 @@
     "access_key": "2NXB663H41RL73CFSI7S",
     "secret_key": "zOsEFPGxc7vNPdFG65Ke0ropKLUaHI4VZoPdTQgB",
     "is_secure": "False",
-    "host": "storage1"
+    "host": "storage1",
+    "rm_bkt": "delete"
   },
   "build": {
     "settings": {

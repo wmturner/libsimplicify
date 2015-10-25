@@ -161,19 +161,18 @@ class commands:
         winner = max(quorum_dict.iteritems(), key=operator.itemgetter(1))[0]
         return winner
     
- #   def put_chroot(self):
- #       chroot_id
- #       self.client_etcd.write('/artifacts/chroots/{}/'.format(, jobID, self.hostname), vote) 
-    
-    def provisioners(self):
-        
-        def chef_chroot(self):
-            os.chroot("/simplicify/chroot")
-            call(["chef-solo", "-o", "nginx"])
-            
-            return
-        return
+    def put_chroot(self, bkt, name, file_path):
+        new_obj = s3_put_file(bkt, name, file_path)
 
+        # Check and make sure object is successfully created.  Object will not be overwritten if it already exists
+        # If the chroot was sucessfully added to s3, use etcd to keep track of the metadata
+        if not new_obj == 1:
+            chroot_meta_data = { "bucket": bkt,
+                                 "name": name
+                               }
+            self.client_etcd.write('/artifacts/chroots/{}/{}'.format(bkt, name), choot_meta_data) 
+        
+    
     
     def s3_ls_bkts(self):
 
@@ -201,20 +200,119 @@ class commands:
                     )
 
     def s3_rm_bktkey(self, bkt, key):
-        bucket = self.client_s3.get_bucket(bkt)
-        bucket.delete_key(key)
+        """
+        Note: This function stores a moves a file object stored in s3 to a predefined delete bucket.  This method allows the apperance of a delete operation, while maintaining the option to restore
 
-    def s3_put_file(self, bkt, key, file_path):
+        Args:
+            bkt: The source s3 bucket.
+            key: The source key representing the file object.
 
-        if not self.s3_ls_bkt(bkt) == 1:
+        Returns:
+            0 if successful, 1 otherwise.
 
-            bucket = self.client_s3.get_bucket(bkt)
+        """
+
+        # Define the response of a successful execution of the function
+        http_status = 200
+        prog_status = 0
+        explanation = "Successfully removed the specifiied file ({}) from specified bucket ({})".format(key, bkt)
+
+        try:
+            src = self.client_s3.get_bucket(bkt)
+        except boto.exception.S3ResponseError, [status, response, body]:
+            explanation = "The bucket you requested ({}) to delete the file ({}) from could not be found.".format(bkt, key)
+
+            return [ status, explanation ]
+
+        try:
+            rm_bkt = self.client_s3.get_bucket('{}'.format(self.config['s3']['rm_bkt']))
+        except boto.exception.S3ResponseError, [status, response, body]:
+            explanation = "The connection to s3 is established, but the delete bucket cannot be found"
+
+            return [ status, explanation ]
+
+        try:
+            rm_bkt.copy_key(key, bkt, key)
+        except boto.exception.S3CopyError, [status, response, body]:
+            if status == 404:
+                explanation = "The file you requested ({}) to delete from bucket ({}) could not be found.".format(key, bkt)
+            else: 
+                explanation = "An unknown error occured while moving the specified file ({}) from the source bucket ({})".format(bkt, key)
+
+            return [ status, explanation ] 
+        try:
+            src.delete_key(key)
+        except boto.exception.S3ResponseError, [status, response, body]:
+            explanation = "An unknown error occured while deleting the specified file ({}) from the bucket ({})".format(bkt, key)
             
-            new_key = bucket.new_key(key)
+            return [ status, explanation ]
+        
+        returns = [ status, http_status, explanation ] 
+
+        return returns
+
+
+    def s3_put_file(self, bkt, key, file_path, overwrite=False):
+        """
+        Note: This function stores a file in s3 if it does not exist, but will overwrite if specifed
+
+        Args:
+            bkt: The target s3 bucket.
+            key: The target key representing the file object.
+            file_path: The path of the file to put at the target bucket/key s3
+            overwrite: Defaults to False, but allows for over-write behavior
+
+        Returns:
+            0 if successful, 1 otherwise.
+
+        """
+
+        try:
+            bucket = self.client_s3.get_bucket(bkt)
+        except boto.exception.S3ResponseError, [status, response, body]:
+            explanation = "The connection to s3 is established, but the bucket ({}) cannot be found".format(bkt)        
+
+        return [ status, explanation ]
+        
+        try:         
+            bucket.new_key(key)
+        except boto.exception.S3CreateError, [status, response, body]:
+            explanation = "An error occurred creating the key in the requested bucket ({}) to store the specified file ({}).".format(bkt, key)
+
             new_key.set_contents_from_filename(file_path)
             new_key.set_canned_acl('private')
             
-            print new_key
+            return new_key
+
+        elif overwrite == True:
+            s3_overwrite_file(bkt, key, file_path)
+        else:
+            return 1
+
+    def s3_overwrite_file(self, bkt, key, file_path):
+        """
+        Note: This function overwrites an existing file type object stored in s3
+            
+        Args:
+            bkt: The target s3 bucket.
+            key: The target key representing the file object.
+            file_path: The path of the file to overwrite the target with in s3
+
+        Returns:
+            0 if successful, 1 otherwise.
+
+        """
+        if self.s3_ls_bkt(bkt):
+
+            bucket = self.client_s3.get_bucket(bkt)
+
+            new_key = bucket.new_key(key)
+            new_key.set_contents_from_filename(file_path)
+            new_key.set_canned_acl('private')
+
+            return new_key
+        else:
+            return 1
    
     def s3_get_file_url(self, bkt, key):
        
