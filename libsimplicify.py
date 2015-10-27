@@ -1,5 +1,4 @@
- #Simplicify Library
-
+# Simplicify Library
 import etcd
 import uuid
 import json
@@ -9,20 +8,38 @@ import operator
 import time
 import boto
 import boto.s3.connection
+from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
+from prometheus_client import start_http_server, Summary
 
 NODE_TYPE="baremetal"
 
 class simplicify:
+    """
+    Note: This function generates a url to to download a file from an s3 bucket
+
+    Args:
+        clusterFQDN: Fully qualified domain that can be used for etcd and s3 connections 
+        SimplicifyConfig: A configuration dictionary that is stored as a JSON file.  More documentation on individual configuration attirbutes is stored in the config.json file
+
+    Returns:
+        returns: All functionality of the Simplicify platform.  This is the parent object of the Simplicify namespace.
+
+    """
     def __init__(self, clusterFQDN, SimplicifyConfig):
         self.clusterFQDN = clusterFQDN
         self.SimplicifyConfig = SimplicifyConfig
-
+        
     def connect_etcd(self):
         
         host_etcd = self.SimplicifyConfig['etcd']['uri']
         port_etcd = self.SimplicifyConfig['etcd']['port']
 
-        self.client_etcd = etcd.Client(host=host_etcd, port=port_etcd)
+        try:
+            self.client_etcd = etcd.Client(host=host_etcd, port=port_etcd)
+        except etcd.EtcdConnectionFailed:
+            explanation = "Connecting to the specified etcd host ({}) on the specified port ({}) failed.".format(host_etcd, port_etcd)
+        
+            returns = [ prog_status, http_status, explanation, self.client_etcd ]
 
         return self.client_etcd
 
@@ -95,9 +112,9 @@ class commands:
             print "key not found"
         return
 
-    def echo_build(self, type, jobID, value):
+    def view_build(self, type, jobID, value):
         try:
-            self.client_etcd.read("/build/{}/{}".format(type, jobID))
+            print self.client_etcd.read("/build/{}/{}".format(type, jobID))
         except etcd.EtcdKeyNotFound:
             print "Key not found"
             self.client_etcd.write('/build/{}/{}'.format(type,jobID), value)
@@ -134,7 +151,6 @@ class commands:
 
                     # Delete the job from the build queue
                     self.client_etcd.delete(pick['key'])
-        #        self.processJob()
                     print "Win"
                 #os.chroot("/simplicify/chroot")
                 #call(["chef-solo", "-o", "nginx"])
@@ -173,33 +189,67 @@ class commands:
             self.client_etcd.write('/artifacts/chroots/{}/{}'.format(bkt, name), choot_meta_data) 
         
     
-    
     def s3_ls_bkts(self):
+        """
+        Note: This function lists all s3 buckets within the configured s3 endpoint
 
-        for bucket in self.client_s3.get_all_buckets():
-            print "{name}\t{created}".format(
-                    name = bucket.name,
-                    created = bucket.creation_date,
-            )
-        return
+        Args:
+            
+        Returns:
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload (with .name, and .creation_date methods)
+
+        """
+        # Define the response of a successful execution of the function
+        http_status = 200
+        prog_status = 0
+        explanation = "Successfully listed all buckets in the connected endpoint ({}).".format(self.config['s3']['host'])
+
+        try:
+            bucket_list = self.client_s3.get_all_buckets()
+        except: 
+            explanation = "An unknown error occurred while trying to list the buckets at the connected s3 endpoint ({}).".format(self.config['s3']['host'])
+            return [ 1, 500, explanation, "" ]
+
+        returns = [ prog_status, http_status, explanation, bucket_list ]
+
+        return returns
+
    
     def s3_ls_bkt(self, bkt):
+        """
+        Note: This function lists the content(s) of an s3 bucket.
 
-        exists = self.client_s3.lookup(bkt)
-        if exists == None:
-            print "Bucket doesn't not exist, you're boned!"
-            return 1
+        Args:
+            bkt: The source s3 bucket.
 
-        bucket = self.client_s3.get_bucket(bkt)
+        Returns:
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload
 
-        for key in bucket.list():
-            print "{name}\t{size}\t{modified}".format(
-                    name = key.name,
-                    size = key.size,
-                    modified = key.last_modified,
-                    )
+        """
 
-    def s3_rm_bktkey(self, bkt, key):
+        # Define the response of a successful execution of the function
+        http_status = 200
+        prog_status = 0
+        explanation = "Successfully listed the contents specified bucket ({}).".format(bkt)
+
+        try:
+            bucket = self.client_s3.get_bucket(bkt)
+        except boto.exception.S3ResponseError, [status, response, body]:
+            if status == 404:
+                explanation = "The bucket you requested ({}) to list the contents of could not be found.".format(bkt)
+            else:
+                status = 500
+                explanation = "An unknown error occurred while trying to list the contents of the specified bucket ({}).".format(bkt)
+            return [ 1, status, explanation, "" ]
+
+        ls_bkt = bucket.list() 
+
+        returns = [ prog_status, http_status, explanation, ls_bkt ]
+
+        return returns
+
+
+    def s3_rm_key(self, bkt, key):
         """
         Note: This function stores a moves a file object stored in s3 to a predefined delete bucket.  This method allows the apperance of a delete operation, while maintaining the option to restore
 
@@ -208,7 +258,7 @@ class commands:
             key: The source key representing the file object.
 
         Returns:
-            0 if successful, 1 otherwise.
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload
 
         """
 
@@ -221,33 +271,36 @@ class commands:
             src = self.client_s3.get_bucket(bkt)
         except boto.exception.S3ResponseError, [status, response, body]:
             explanation = "The bucket you requested ({}) to delete the file ({}) from could not be found.".format(bkt, key)
-
-            return [ status, explanation ]
+            return [ 1, status, explanation, "" ]
 
         try:
             rm_bkt = self.client_s3.get_bucket('{}'.format(self.config['s3']['rm_bkt']))
         except boto.exception.S3ResponseError, [status, response, body]:
             explanation = "The connection to s3 is established, but the delete bucket cannot be found"
-
-            return [ status, explanation ]
+            return [ 1, status, explanation, "" ]
 
         try:
             rm_bkt.copy_key(key, bkt, key)
         except boto.exception.S3CopyError, [status, response, body]:
             if status == 404:
-                explanation = "The file you requested ({}) to delete from bucket ({}) could not be found.".format(key, bkt)
+                explanation = "An unknown error occured while copying the file you requested ({}) to delete from bucket ({}).".format(key, bkt)
             else: 
                 explanation = "An unknown error occured while moving the specified file ({}) from the source bucket ({})".format(bkt, key)
+            return [ 1, status, explanation, "" ] 
 
-            return [ status, explanation ] 
+        except boto.exception.S3ResponseError, [status, response, body]:
+            explanation = "The file you requested ({}) to delete from bucket ({}) could not be found.".format(key, bkt)
+
+            return [ 1, status, explanation, "" ]
+
         try:
             src.delete_key(key)
         except boto.exception.S3ResponseError, [status, response, body]:
             explanation = "An unknown error occured while deleting the specified file ({}) from the bucket ({})".format(bkt, key)
             
-            return [ status, explanation ]
+            return [ 1, status, explanation, "" ]
         
-        returns = [ status, http_status, explanation ] 
+        returns = [ prog_status, http_status, explanation, "" ] 
 
         return returns
 
@@ -263,61 +316,96 @@ class commands:
             overwrite: Defaults to False, but allows for over-write behavior
 
         Returns:
-            0 if successful, 1 otherwise.
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload
 
         """
 
+        # Define the response of a successful execution of the function
+        http_status = 200
+        prog_status = 0
+        explanation = "Successfully uploaded the specified file ({}) to specified bucket ({})".format(key, bkt)
+
+        # Instantiate the bucket that the file is desired to be stored in
         try:
             bucket = self.client_s3.get_bucket(bkt)
         except boto.exception.S3ResponseError, [status, response, body]:
             explanation = "The connection to s3 is established, but the bucket ({}) cannot be found".format(bkt)        
+            return [ 1, status, explanation ]
 
-        return [ status, explanation ]
+        existance_test = bucket.get_key(key)
+        if existance_test == None:
+            pass
+        elif overwrite == True:
+            pass
+        else:
+            status = 204
+            explanation = "File already exists at the specified key ({}) in the specified bucket ({})".format(key, bkt)
+            return [ 1, status, explanation ]
         
+        # Create a the key used to store the file
         try:         
-            bucket.new_key(key)
+            new_key = bucket.new_key(key)
         except boto.exception.S3CreateError, [status, response, body]:
             explanation = "An error occurred creating the key in the requested bucket ({}) to store the specified file ({}).".format(bkt, key)
+            return [ status, explanation ]
 
+        # Upload file contents to key just created
+        try:
             new_key.set_contents_from_filename(file_path)
+        except boto.exception.S3DataError, [status, args]:
+            explanation = "An error occurred creating the key in the requested bucket ({}) to store the specified file ({}).".format(bkt, key)
+            return [ status, explanation ]
+
+        # Set private ACL on file
+        try:
             new_key.set_canned_acl('private')
+        except:
+            explanation = "An unknown error occurred setting the ACL on file {}".format(key)
+            status = 500
+            return [ status, explanation ]
             
-            return new_key
+        returns = [ prog_status, http_status, explanation ]
 
-        elif overwrite == True:
-            s3_overwrite_file(bkt, key, file_path)
-        else:
-            return 1
-
-    def s3_overwrite_file(self, bkt, key, file_path):
+        return returns
+   
+    def s3_get_file_url(self, bkt, key):
         """
-        Note: This function overwrites an existing file type object stored in s3
-            
+        Note: This function generates a url to to download a file from an s3 bucket
+
         Args:
             bkt: The target s3 bucket.
             key: The target key representing the file object.
-            file_path: The path of the file to overwrite the target with in s3
 
         Returns:
-            0 if successful, 1 otherwise.
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload
 
         """
-        if self.s3_ls_bkt(bkt):
 
+        # Define the response of a successful execution of the function
+        http_status = 200
+        prog_status = 0
+        explanation = "Successfully generate url for specified file ({}) in specified bucket ({})".format(key, bkt)
+
+        try:
             bucket = self.client_s3.get_bucket(bkt)
+        except boto.exception.S3ResponseError, [status, response, body]:
+            explanation = "The connection to s3 is established, but the bucket ({}) cannot be found".format(bkt)
+            return [ 1, status, explanation, "" ]
 
-            new_key = bucket.new_key(key)
-            new_key.set_contents_from_filename(file_path)
-            new_key.set_canned_acl('private')
-
-            return new_key
+        req_key = bucket.get_key(key)
+        if req_key == None:
+            status = 404
+            explanation = "A file cannot be found at the specified key ({}) in the specified bucket ({})".format(key, bkt)
+            return [ 1, status, explanation, "" ] 
         else:
-            return 1
-   
-    def s3_get_file_url(self, bkt, key):
-       
-        if not self.s3_ls_bkt(bkt) == 1:
-            bucket = self.client_s3.get_bucket(bkt)
-            req_key = bucket.get_key(key)
-            obj_url = req_key.generate_url(3600, query_auth=True, force_http=True)
-        return obj_url
+            try:
+                obj_url = req_key.generate_url(3600, query_auth=True, force_http=True)
+            except:
+                explanation = "An unknown error occurred setting the ACL on file {}".format(key)
+                status = 500
+                return [ 1, status, explanation, "" ]
+
+        payload = obj_url
+        returns = [ prog_status, http_status, explanation, payload ]
+
+        return returns
