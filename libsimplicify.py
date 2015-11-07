@@ -15,10 +15,10 @@ NODE_TYPE="baremetal"
 
 class simplicify:
     """
-    Note: This function generates a url to to download a file from an s3 bucket
+    Note: Class establishes connections that will be used throughout various classes in Simplicify
 
     Args:
-        clusterFQDN: Fully qualified domain that can be used for etcd and s3 connections 
+        clusterFQDN: Fully qualified domain that can be used for etcd and s3 connections
         SimplicifyConfig: A configuration dictionary that is stored as a JSON file.  More documentation on individual configuration attirbutes is stored in the config.json file
 
     Returns:
@@ -28,9 +28,19 @@ class simplicify:
     def __init__(self, clusterFQDN, SimplicifyConfig):
         self.clusterFQDN = clusterFQDN
         self.SimplicifyConfig = SimplicifyConfig
-        
+
     def connect_etcd(self):
-        
+        """
+        Note: This method establishes an etcd connection using settings in input during class initialization
+
+        Args:
+            self.SimplicifyConfig: A configuration dictionary that is stored as a JSON file.  More documentation on individual configuration attirbutes is stored in the config.json file
+
+        Returns:
+            returns: On success this method returns an etcd client object
+
+        """
+
         host_etcd = self.SimplicifyConfig['etcd']['uri']
         port_etcd = self.SimplicifyConfig['etcd']['port']
 
@@ -38,12 +48,22 @@ class simplicify:
             self.client_etcd = etcd.Client(host=host_etcd, port=port_etcd)
         except etcd.EtcdConnectionFailed:
             explanation = "Connecting to the specified etcd host ({}) on the specified port ({}) failed.".format(host_etcd, port_etcd)
-        
+
             returns = [ prog_status, http_status, explanation, self.client_etcd ]
 
         return self.client_etcd
 
     def connect_s3(self):
+        """
+        Note: This method establishes an s3 connection using settings in input during class initialization
+
+        Args:
+            self.SimplicifyConfig: A configuration dictionary that is stored as a JSON file.  More documentation on individual configuration attirbutes is stored in the config.json file
+
+        Returns:
+            returns: On success this method returns an etcd client object
+
+        """
 
         access_key = self.SimplicifyConfig['s3']['access_key']
         secret_key = self.SimplicifyConfig['s3']['secret_key']
@@ -69,6 +89,20 @@ class commands:
         self.hostname = socket.gethostname()
 
     def queue_build(self, type, ttl, provisioner, settings, appliance_name):
+        """
+        Note: This method establishes an s3 connection using settings in input during class initialization
+
+        Args:
+            type: The type of build (defined in and validated against config.json)
+            ttl: Total time build will exist after initialization
+            provisioner: Provisioner used for post configuration of the build (defined in and validated against config.json)
+            settings: Settings used for provisioner configuration (defined in and validated against config.json)
+            appliance_name: Colloquial name used to casually descibe the build (uniqueness is not required or enforce)
+        Returns:
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload (with .name, and .creation_date methods)
+
+        """
+
         self.type = type
         self.ttl = ttl
         self.provisioner = provisioner
@@ -103,42 +137,85 @@ class commands:
             self.client_etcd.write('/build/{}/{}'.format(type,jobID), json.dumps(job))
 
 
-    def rm_build(self, type, jobID):
-        
-        try: 
-            self.client_etcd.read("/build/{}/{}".format(type, jobID))
-            self.client_etcd.delete("/build/{}/{}".format(type, jobID))
+    def rm_build(self, type, buildID):
+        """
+        Note: This method removes a queued build
+        Args:
+            type: The type of build (defined in and validated against config.json)
+            appliance_name: Colloquial name used to casually descibe the build (uniqueness is not required or enforce)
+        Returns:
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload
+
+        """
+
+        try:
+            self.client_etcd.read("/build/{}/{}".format(type, buildID))
+            self.client_etcd.delete("/build/{}/{}".format(type, buildID))
         except etcd.EtcdKeyNotFound:
             print "key not found"
         return
 
-    def view_build(self, type, jobID, value):
-        try:
-            print self.client_etcd.read("/build/{}/{}".format(type, jobID))
-        except etcd.EtcdKeyNotFound:
-            print "Key not found"
-            self.client_etcd.write('/build/{}/{}'.format(type,jobID), value)
-        
-        
+    def get_build(self, type, buildID):
+        """
+        Note: This method fetches the information associated with a buildID
 
-    def pollBuildQueue(self):
-       # print "Beginning Polling loop"
+        Args:
+            type: The type of build (defined in and validated against config.json)
+            appliance_name: Colloquial name used to casually descibe the build (uniqueness is not required or enforce)
+        Returns:
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload
+
+        """
+
+        # Define the response of a successful execution of the function
+        http_status = 200
+        prog_status = 0
+        explanation = "Successfully fetched contents of the {} build with buildID {}".format(type, buildID)
+
+        try:
+            print self.client_etcd.read("/build/{}/{}".format(type, buildID))
+        except etcd.EtcdKeyNotFound:
+            explanation = "No key found for the specified build type {} with the specified buildID {}".format(type, buildID)
+
+
+        returns = [ prog_status, http_status, explanation, pick['key'] ]
+
+        return returns
+
+
+
+    def pollBuildQueue(self, type):
+        """
+        Note: This method polls the build queues for a specified node type, and submits a bid if resources are free
+
+        Args:
+            type: The type of build (defined in and validated against config.json)
+            appliance_name: Colloquial name used to casually descibe the build (uniqueness is not required or enforce)
+        Returns:
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload
+
+        """
+
+        # Define the response of a successful execution of the function
+        http_status = 200
+        prog_status = 0
+        explanation = "Successfully won a bid for a {} build".format(type)
 
         # Execute a recursive query to etcd and only show a single new value after the request to the cluster was made:
-        self.queue = self.client_etcd.read('/build/{}'.format(NODE_TYPE), recursive = True)._children
-        
-        pick = random.choice(self.queue)        
+        self.queue = self.client_etcd.read('/build/{}'.format(self.type), recursive = True)._children
+
+        pick = random.choice(self.queue)
         print pick['key']
         if pick:
             # Recapture the jobID by assigning the end of the complete URI for the key (UUID that uniquely desecribes the job prescribed from the controller):
-            jobID = pick['key'].rsplit('/',1)[1]
+            buildID = pick['key'].rsplit('/',1)[1]
 
-            winner = self._vote(jobID)
+            winner = self._bid(buildID)
             # If the current worker process believes itis the winner, then begin performing the provisioning task:
             if winner==self.hostname:
                 try:
                     # Double check to make sure another node has not claimed winner for the jobID
-                    out_of_syncWinner = self.client_etcd.read('/winner/{}/{}/{}'.format(NODE_TYPE, jobID, self.hostname))
+                    out_of_syncWinner = self.client_etcd.read('/winner/{}/{}/{}'.format(self.type, buildID, self.hostname))
                     print "WINNER ALREADY SELECTED, YOU ARE OUT OF SYNC"
 
                 # During good cluster behavior, the below condition should be triggered
@@ -146,8 +223,8 @@ class commands:
 
                     # If node truly is the winner, then write it to the winner queue for record
                     # Inform the cluster that the provisioning job is in progress
-                    self.client_etcd.write('/winner/{}/{}/{}'.format(NODE_TYPE, jobID, self.hostname), pick['value'])
-                    self.client_etcd.write('/inprogress/{}/{}'.format(NODE_TYPE, jobID), "True")
+                    self.client_etcd.write('/winner/{}/{}/{}'.format(type, buildID, self.hostname), pick['value'])
+                    self.client_etcd.write('/inprogress/{}/{}'.format(type, buildID), "True")
 
                     # Delete the job from the build queue
                     self.client_etcd.delete(pick['key'])
@@ -156,28 +233,39 @@ class commands:
                 #call(["chef-solo", "-o", "nginx"])
                 exit
 
-        return 0
+        returns = [ prog_status, http_status, explanation, pick['key'] ]
 
-    def _vote(self,jobID):
-        # Create a vote
-        # A vote is an integer value between 1 and 1000, and the cluster member with the highest number wins:
-        vote = random.randrange(100, 1000, 3)
-        # Write the worker's vote to the appropriate etcd folder:
-        self.client_etcd.write('/vote/{}/{}/{}'.format(NODE_TYPE, jobID, self.hostname), vote)
+        return returns
 
-        # Wait a minute until all workers have had an opportunity to vote:
+    def _bid(self,jobID):
+        # Create a bid
+        # A bid is an integer value between 1 and 1000, and the cluster member with the highest number wins:
+        bid = random.randrange(100, 1000, 3)
+        # Write the worker's bid to the appropriate etcd folder:
+        self.client_etcd.write('/bid/{}/{}/{}'.format(NODE_TYPE, jobID, self.hostname), bid)
+
+        # Wait a minute until all workers have had an opportunity to bid:
         time.sleep(1)
-        vote_queue = self.client_etcd.read('/vote/{}/{}'.format(NODE_TYPE, jobID), recursive = True)
+        bid_queue = self.client_etcd.read('/bid/{}/{}'.format(NODE_TYPE, jobID), recursive = True)
 
-        # Create a quorum dictionary used to store all votes from the various members and determine which worker is the winner
+        # Create a quorum dictionary used to store all bids from the various members and determine which worker is the winner
         quorum_dict = {}
-        for vote in vote_queue._children:
-            quorum_dict.update({ vote['key'].rsplit('/',1)[1]: vote['value'] })
+        for bid in bid_queue._children:
+            quorum_dict.update({ bid['key'].rsplit('/',1)[1]: bid['value'] })
 
         winner = max(quorum_dict.iteritems(), key=operator.itemgetter(1))[0]
         return winner
-    
+
     def put_chroot(self, bkt, name, file_path):
+        """
+        Note: This method adds a chroot environment (tar, zip, 7zip, tar.gz, .gzip) to s3, and creates a correspoding entry in etcd
+
+        Args:
+
+        Returns:
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload (with .name, and .creation_date methods)
+
+        """
         new_obj = s3_put_file(bkt, name, file_path)
 
         # Check and make sure object is successfully created.  Object will not be overwritten if it already exists
@@ -186,19 +274,20 @@ class commands:
             chroot_meta_data = { "bucket": bkt,
                                  "name": name
                                }
-            self.client_etcd.write('/artifacts/chroots/{}/{}'.format(bkt, name), choot_meta_data) 
-        
-    
+            self.client_etcd.write('/artifacts/chroots/{}/{}'.format(bkt, name), choot_meta_data)
+
+
     def s3_ls_bkts(self):
         """
         Note: This function lists all s3 buckets within the configured s3 endpoint
 
         Args:
-            
+
         Returns:
             returns: Array containing the program status code, http status code, humanly readable explanation, and payload (with .name, and .creation_date methods)
 
         """
+
         # Define the response of a successful execution of the function
         http_status = 200
         prog_status = 0
@@ -206,7 +295,7 @@ class commands:
 
         try:
             bucket_list = self.client_s3.get_all_buckets()
-        except: 
+        except:
             explanation = "An unknown error occurred while trying to list the buckets at the connected s3 endpoint ({}).".format(self.config['s3']['host'])
             return [ 1, 500, explanation, "" ]
 
@@ -214,7 +303,7 @@ class commands:
 
         return returns
 
-   
+
     def s3_ls_bkt(self, bkt):
         """
         Note: This function lists the content(s) of an s3 bucket.
@@ -242,7 +331,7 @@ class commands:
                 explanation = "An unknown error occurred while trying to list the contents of the specified bucket ({}).".format(bkt)
             return [ 1, status, explanation, "" ]
 
-        ls_bkt = bucket.list() 
+        ls_bkt = bucket.list()
 
         returns = [ prog_status, http_status, explanation, ls_bkt ]
 
@@ -251,7 +340,7 @@ class commands:
 
     def s3_rm_key(self, bkt, key):
         """
-        Note: This function stores a moves a file object stored in s3 to a predefined delete bucket.  This method allows the apperance of a delete operation, while maintaining the option to restore
+        Note: This function a moves a file object stored in s3 to a predefined delete bucket.  This method allows the apperance of a delete operation, while maintaining the option to restore
 
         Args:
             bkt: The source s3 bucket.
@@ -284,9 +373,9 @@ class commands:
         except boto.exception.S3CopyError, [status, response, body]:
             if status == 404:
                 explanation = "An unknown error occured while copying the file you requested ({}) to delete from bucket ({}).".format(key, bkt)
-            else: 
+            else:
                 explanation = "An unknown error occured while moving the specified file ({}) from the source bucket ({})".format(bkt, key)
-            return [ 1, status, explanation, "" ] 
+            return [ 1, status, explanation, "" ]
 
         except boto.exception.S3ResponseError, [status, response, body]:
             explanation = "The file you requested ({}) to delete from bucket ({}) could not be found.".format(key, bkt)
@@ -297,10 +386,10 @@ class commands:
             src.delete_key(key)
         except boto.exception.S3ResponseError, [status, response, body]:
             explanation = "An unknown error occured while deleting the specified file ({}) from the bucket ({})".format(bkt, key)
-            
+
             return [ 1, status, explanation, "" ]
-        
-        returns = [ prog_status, http_status, explanation, "" ] 
+
+        returns = [ prog_status, http_status, explanation, "" ]
 
         return returns
 
@@ -329,7 +418,7 @@ class commands:
         try:
             bucket = self.client_s3.get_bucket(bkt)
         except boto.exception.S3ResponseError, [status, response, body]:
-            explanation = "The connection to s3 is established, but the bucket ({}) cannot be found".format(bkt)        
+            explanation = "The connection to s3 is established, but the bucket ({}) cannot be found".format(bkt)
             return [ 1, status, explanation ]
 
         existance_test = bucket.get_key(key)
@@ -341,9 +430,9 @@ class commands:
             status = 204
             explanation = "File already exists at the specified key ({}) in the specified bucket ({})".format(key, bkt)
             return [ 1, status, explanation ]
-        
+
         # Create a the key used to store the file
-        try:         
+        try:
             new_key = bucket.new_key(key)
         except boto.exception.S3CreateError, [status, response, body]:
             explanation = "An error occurred creating the key in the requested bucket ({}) to store the specified file ({}).".format(bkt, key)
@@ -363,11 +452,11 @@ class commands:
             explanation = "An unknown error occurred setting the ACL on file {}".format(key)
             status = 500
             return [ status, explanation ]
-            
+
         returns = [ prog_status, http_status, explanation ]
 
         return returns
-   
+
     def s3_get_file_url(self, bkt, key):
         """
         Note: This function generates a url to to download a file from an s3 bucket
@@ -396,7 +485,7 @@ class commands:
         if req_key == None:
             status = 404
             explanation = "A file cannot be found at the specified key ({}) in the specified bucket ({})".format(key, bkt)
-            return [ 1, status, explanation, "" ] 
+            return [ 1, status, explanation, "" ]
         else:
             try:
                 obj_url = req_key.generate_url(3600, query_auth=True, force_http=True)
