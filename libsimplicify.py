@@ -498,3 +498,39 @@ class commands:
         returns = [ prog_status, http_status, explanation, payload ]
 
         return returns
+
+############### DNS METHODS #################
+    def ls_srv(self, service_name):
+        """
+        Note: This function retrieves all configured S
+        Args:
+            service_name:  The symbolic name of the desired service, as defined in Assigned
+        Numbers [STD 2] or locally.  An underscore (_) is prepended to
+        the service identifier to avoid collisions with DNS labels that
+        occur in nature.
+
+        Returns:
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload
+
+        """
+
+        # Define the response of a successful execution of the function
+        http_status = 200
+        prog_status = 0
+        explanation = "Successfully listed all service records with the specified service name ({})".format(service_name)
+
+        try:
+            response = dns.resolver.query(service_name, 'SRV')
+        except:
+                explanation = "An unknown error occurred listing records for the specified service ({})".format(service_name)
+                status = 500
+                return [ 1, status, explanation, "" ]
+
+        results_list = []
+        for rdata in response:
+            results_list.append(str(rdata.target).rstrip('.'))
+
+        payload = results_list
+        returns = [ prog_status, http_status, explanation, payload ]
+
+        return returns
