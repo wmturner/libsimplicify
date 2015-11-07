@@ -1,0 +1,10 @@
+- Implement Logging library
+- Implement Metrics library
+- Implement Elasticsearch output
+- Implement Chef Provisioner w/chroot
+- Implement Chroot Provisioner
+- Implement Docker Provisioner
+- Build beefier Object store
+- Build bootable read-only system image
+- Create update mechanism
+

@@ -1,0 +1,32 @@
+{
+  "etcd": {
+    "uri": "controller1.simplicify.com",
+    "port": 2379
+  },
+  "s3": {
+    "access_key": "2NXB663H41RL73CFSI7S",
+    "secret_key": "zOsEFPGxc7vNPdFG65Ke0ropKLUaHI4VZoPdTQgB",
+    "is_secure": "False",
+    "host": "storage1",
+    "rm_bkt": "delete"
+  },
+  "build": {
+    "settings": {
+      "chef": [
+        "cheffile",
+        "cookbooks",
+        "roles",
+        "attributes",
+        "chroot_url"
+      ]
+    },
+    "type": [
+      "baremetal",
+      "docker"
+    ],
+    "provisioner": [
+      "chef",
+      "chroot"
+    ]
+  }
+}
