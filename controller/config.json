@@ -10,6 +10,7 @@
     "host": "storage1",
     "rm_bkt": "delete"
   },
+  "dns": { "primary": "192.168.1.201" },
   "build": {
     "settings": {
       "chef": [
