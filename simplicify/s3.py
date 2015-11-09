@@ -1,3 +1,12 @@
+# Copyright (C) Simplicify, Inc - All Rights Reserved
+# Unauthorized copying of this file, via any medium is strictly prohibited
+# Proprietary and confidential
+# Written by William Michael Turner <williammichaelturner@gmail.com>, 2015
+
+import uuid
+import json
+import boto
+import boto.s3.connection
 class commands:
     def __init__(self, simplicify, provisioner_type):
         self.provisioner_type = provisioner_type

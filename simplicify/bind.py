@@ -1,3 +1,24 @@
+# Copyright (C) Simplicify, Inc - All Rights Reserved
+# Unauthorized copying of this file, via any medium is strictly prohibited
+# Proprietary and confidential
+# Written by William Michael Turner <williammichaelturner@gmail.com>, 2015
+
+import etcd
+import uuid
+import json
+import random
+import socket
+import operator
+import time
+import boto
+import boto.s3.connection
+import dns.resolver
+import dns.zone
+from dns.exception import DNSException
+from dns.rdataclass import *
+from dns.rdatatype import *
+from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
+from prometheus_client import start_http_server, Summary
 class commands:
     def __init__(self, simplicify, provisioner_type):
         self.provisioner_type = provisioner_type
