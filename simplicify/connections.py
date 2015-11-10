@@ -17,10 +17,13 @@ import dns.zone
 from dns.exception import DNSException
 from dns.rdataclass import *
 from dns.rdatatype import *
+import logging
+import logstash
+import sys
 from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
 from prometheus_client import start_http_server, Summary
 
-class create:
+class open:
     """
     Note: Class establishes connections that will be used throughout various classes in Simplicify
 
@@ -36,7 +39,7 @@ class create:
         self.clusterFQDN = clusterFQDN
         self.SimplicifyConfig = SimplicifyConfig
 
-    def connect_etcd(self):
+    def etcd(self):
         """
         Note: This method establishes an etcd connection using settings in input during class initialization
 
@@ -60,7 +63,37 @@ class create:
 
         return self.client_etcd
 
-    def connect_s3(self):
+
+    def logstash(self):
+        """
+        Note: This method establishes a connection to logstash using settings in input during class initialization
+
+        Args:
+            self.SimplicifyConfig: A configuration dictionary that is stored as a JSON file.  More documentation on individual configuration attirbutes is stored in the config.json file
+
+        Returns:
+            returns: On success this method returns a logstash client object
+
+        """
+        host = self.SimplicifyConfig['logstash']['host']
+        port = self.SimplicifyConfig['logstash']['port']
+
+        self.logger = logging.getLogger('python-logstash-logger')
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(logstash.TCPLogstashHandler(host, 5000, version=1))
+
+        fields = {
+            'prog_status': '0',
+            'http_status': '200',
+            'explanation': 'Simplicify component ({}) is starting up, and is successfully logging'.format(self.program_name)
+            }
+
+        self.logger.info('simplicify: fields', fields=fields)
+
+        return self.logger
+
+
+    def s3(self):
         """
         Note: This method establishes an s3 connection using settings in input during class initialization
 
@@ -86,3 +119,29 @@ class create:
         )
 
         return self.client_s3
+
+
+    def omapi(self):
+        """
+        Note: This method establishes an omapi connection to isc-dhcp-server using settings in input during class initialization
+
+        Args:
+            self.SimplicifyConfig: A configuration dictionary that is stored as a JSON file.  More documentation on individual configuration attirbutes is stored in the config.json file
+
+        Returns:
+            returns: On success this method returns an omapi client object
+
+        """
+
+        keyname = self.SimplicifyConfig['omapi']['keyname']
+        secret  = self.SimplicifyConfig['omapi']['secret']
+        server  = self.SimplicifyConfig['omapi']['server']
+        port    = self.SimplicifyConfig['omapi']['port']
+
+        try:
+            self.client_omapi = pypureomapi.Omapi(server, port, keyname, secret)
+        except pypureomapi.OmapiError, err:
+            print "OMAPI error: %s" % (err,)
+            sys.exit(1)
+
+        return self.client_omapi

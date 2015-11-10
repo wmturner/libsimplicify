@@ -7,7 +7,7 @@ import uuid
 import json
 import boto
 import boto.s3.connection
-class commands:
+class s3_cmd:
     def __init__(self, simplicify, provisioner_type):
         self.provisioner_type = provisioner_type
         self.client_etcd = simplicify.client_etcd
@@ -15,7 +15,7 @@ class commands:
         self.config = simplicify.SimplicifyConfig
         self.hostname = socket.gethostname()
 
-    def s3_ls_bkts(self):
+    def ls_bkts(self):
         """
         Note: This function lists all s3 buckets within the configured s3 endpoint
 
@@ -42,7 +42,7 @@ class commands:
         return returns
 
 
-    def s3_ls_bkt(self, bkt):
+    def ls_bkt(self, bkt):
         """
         Note: This function lists the content(s) of an s3 bucket.
 
@@ -76,7 +76,7 @@ class commands:
         return returns
 
 
-    def s3_rm_key(self, bkt, key):
+    def rm_key(self, bkt, key):
         """
         Note: This function a moves a file object stored in s3 to a predefined delete bucket.  This method allows the apperance of a delete operation, while maintaining the option to restore
 
@@ -132,7 +132,7 @@ class commands:
         return returns
 
 
-    def s3_put_file(self, bkt, key, file_path, overwrite=False):
+    def put_file(self, bkt, key, file_path, overwrite=False):
         """
         Note: This function stores a file in s3 if it does not exist, but will overwrite if specifed
 
@@ -195,7 +195,7 @@ class commands:
 
         return returns
 
-    def s3_get_file_url(self, bkt, key):
+    def get_file_url(self, bkt, key):
         """
         Note: This function generates a url to to download a file from an s3 bucket
 
