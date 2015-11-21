@@ -142,6 +142,43 @@ class open:
             self.client_omapi = pypureomapi.Omapi(server, port, keyname, secret)
         except pypureomapi.OmapiError, err:
             print "OMAPI error: %s" % (err,)
-            sys.exit(1)
+            return
 
         return self.client_omapi
+
+    def elasticsearch(self):
+        """
+        Note: This method establishes an http connection to elasticsearch using settings in input during class initialization
+
+        Args:
+            self.SimplicifyConfig: A configuration dictionary that is stored as a JSON file.  More documentation on individual configuration attirbutes is stored in the config.json file
+
+        Returns:
+            returns: On success this method returns an elasticsearch client object
+
+        """
+
+        try:
+            self.client_elasticsearch = elasticsearch.Elasticsearch(host=self.SimplicifyConfig['elasticsearch']['host'], port=self.SimplicifyConfig['elasticsearch']['port'])
+        except:
+            print ""
+        return self.client_elasticsearch
+
+
+    def redis(self):
+        """
+        Note: This method establishes a redis connection using settings in input during class initialization
+
+        Args:
+            self.SimplicifyConfig: A configuration dictionary that is stored as a JSON file.  More documentation on individual configuration attirbutes is stored in the config.json file
+
+        Returns:
+            returns: On success this method returns an omapi client object
+
+        """
+
+        try:
+            self.client_redis = redis.Redis(host=self.SimplicifyConfig['redis']['host'], port=self.SimplicifyConfig['redis']['port'])
+        except:
+            print ""
+        return self.client_redis
