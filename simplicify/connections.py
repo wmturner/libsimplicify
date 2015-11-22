@@ -20,8 +20,7 @@ from dns.rdatatype import *
 import logging
 import logstash
 import sys
-from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
-from prometheus_client import start_http_server, Summary
+import redis
 
 class open:
     """
@@ -180,5 +179,5 @@ class open:
         try:
             self.client_redis = redis.Redis(host=self.SimplicifyConfig['redis']['host'], port=self.SimplicifyConfig['redis']['port'])
         except:
-            print ""
+            print "ERROR"
         return self.client_redis

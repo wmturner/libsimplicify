@@ -27,6 +27,6 @@ class commands:
             explanation = "An unknown error occurred while trying get a random request from the configured redis server ({}).".format(self.config['redis']['host'])
             return [ 1, 500, explanation, "" ]
 
-        returns = [ prog_status, http_status, explanation, bucket_list ]
+        returns = [ prog_status, http_status, explanation, request ]
 
         return returns
