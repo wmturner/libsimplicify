@@ -15,7 +15,7 @@ import dns.zone
 from dns.exception import DNSException
 from dns.rdataclass import *
 from dns.rdatatype import *
-class bind_cmd:
+class commands:
     def __init__(self, simplicify, provisioner_type):
         self.provisioner_type = provisioner_type
         self.client_etcd = simplicify.client_etcd
