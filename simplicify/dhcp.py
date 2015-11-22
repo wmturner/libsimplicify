@@ -58,3 +58,29 @@ class commands:
         returns = [ prog_status, http_status, explanation, deleted_lease ]
 
         return returns
+
+    def loopup_lease(self, mac_address):
+        """
+        Note: This method queries a DHCP server and returns a lease corresponding to the provided MAC Address
+
+        Args:
+
+        Returns:
+            returns: Array containing the program status code, http status code, humanly readable explanation, and payload (with .name, and .creation_date methods)
+
+        """
+
+        # Define the response of a successful execution of the function
+        http_status = 200
+        prog_status = 0
+        explanation = "Successfully added DHCP lease for specified MAC address ({}) on specified IP address ({}) with specified name ({}) on specified server ({}) .".format(mac_address, ip_address, name, self.config['omapi']['server'])
+
+        try:
+            lease = self.client_omapi.lookup_mac(mac_address)
+        except:
+            explanation = "An unknown error occurred while trying to add a DHCP lease for specified MAC address ({}) on specified IP address ({}) with specified name ({}) on specified server ({}) .".format(mac_address, ip_address, name, self.config['omapi']['server'])
+            return [ 1, 500, explanation, "" ]
+
+        returns = [ prog_status, http_status, explanation, lease ]
+
+        return returns

@@ -1,12 +1,10 @@
 class commands:
     def __init__(self, simplicify):
-        self.provisioner_type = provisioner_type
-        self.client_etcd = simplicify.client_etcd
         self.client_redis = simplicify.client_redis
         self.config = simplicify.SimplicifyConfig
         self.hostname = socket.gethostname()
 
-    def get__rand_request(self):
+    def get_rand_request(self):
         """
         Note: This function gets a random request from the redis server specified in the client config
 
