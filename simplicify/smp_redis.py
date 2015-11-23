@@ -2,7 +2,6 @@ class commands:
     def __init__(self, simplicify):
         self.client_redis = simplicify.client_redis
         self.config = simplicify.SimplicifyConfig
-        self.hostname = socket.gethostname()
 
     def get_rand_request(self):
         """

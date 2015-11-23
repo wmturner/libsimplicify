@@ -12,6 +12,7 @@ import operator
 import time
 import boto
 import boto.s3.connection
+import pypureomapi
 import dns.resolver
 import dns.zone
 from dns.exception import DNSException
