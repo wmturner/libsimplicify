@@ -70,7 +70,7 @@ class commands:
         # Define the response of a successful execution of the function
         http_status = 200
         prog_status = 0
-        explanation = "Successfully added DHCP lease for specified MAC address on specified IP address with specified name ({}) on specified server ({}) .".format(mac_address, self.config['omapi']['server'])
+        explanation = "Successfully listed DHCP lease for specified MAC address ({}) on specified server ({}) .".format(mac_address, self.config['omapi']['server'])
 
         try:
             lease = self.client_omapi.lookup_ip_host(mac_address)
@@ -78,6 +78,6 @@ class commands:
             explanation = "An unknown error occurred while trying to add a DHCP lease for specified MAC address ({}) on specified IP address ({}) with specified name on specified server.".format(mac_address, self.config['omapi']['server'])
             return [ 1, 500, explanation, "" ]
 
-        returns = [ prog_status, http_status, explanation, lease ]
+        returns = { "prog_status": prog_status, "http_status": http_status, "explanation": explanation, "payload": lease }
 
         return returns
