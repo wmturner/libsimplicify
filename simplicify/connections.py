@@ -12,6 +12,7 @@ import operator
 import time
 import boto
 import boto.s3.connection
+import pypureomapi
 import dns.resolver
 import dns.zone
 from dns.exception import DNSException
@@ -20,8 +21,7 @@ from dns.rdatatype import *
 import logging
 import logstash
 import sys
-from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
-from prometheus_client import start_http_server, Summary
+import redis
 
 class open:
     """
@@ -180,5 +180,5 @@ class open:
         try:
             self.client_redis = redis.Redis(host=self.SimplicifyConfig['redis']['host'], port=self.SimplicifyConfig['redis']['port'])
         except:
-            print ""
+            print "ERROR"
         return self.client_redis
