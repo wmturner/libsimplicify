@@ -1,10 +1,7 @@
 class commands:
-    def __init__(self, simplicify, provisioner_type):
-        self.provisioner_type = provisioner_type
-        self.client_etcd = simplicify.client_etcd
+    def __init__(self, simplicify):
         self.client_omapi = simplicify.client_omapi
         self.config = simplicify.SimplicifyConfig
-        self.hostname = socket.gethostname()
 
     def add_lease(self, ip_address, mac_address, name):
         """
@@ -59,7 +56,7 @@ class commands:
 
         return returns
 
-    def loopup_lease(self, mac_address):
+    def lookup_lease(self, mac_address):
         """
         Note: This method queries a DHCP server and returns a lease corresponding to the provided MAC Address
 
