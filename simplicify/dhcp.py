@@ -15,17 +15,18 @@ class commands:
         """
 
         # Define the response of a successful execution of the function
-        http_status = 200
+        http_status = 201
         prog_status = 0
         explanation = "Successfully added DHCP lease for specified MAC address ({}) on specified IP address ({}) on specified server ({}) .".format(mac_address, ip_address, self.config['omapi']['server'])
+        payload = {}
 
         try:
-            added_lease = self.client_omapi.add_host(ip_address, mac_address)
+            payload['added_lease'] = self.client_omapi.add_host(ip_address, mac_address)
         except:
             explanation = "An unknown error occurred while trying to add a DHCP lease for specified MAC address ({}) on specified IP address ({}) with specified on specified server ({}) .".format(mac_address, ip_address, self.config['omapi']['server'])
-            return [ 1, 500, explanation, "" ]
+            return { "prog_status": 1, "http_status": 500, "explanation": explanation, "payload": "" }
 
-        returns = [ prog_status, http_status, explanation, added_lease ]
+        returns = { "prog_status": prog_status, "http_status": http_status, "explanation": explanation, "payload": payload }
 
         return returns
 
@@ -45,14 +46,15 @@ class commands:
         http_status = 200
         prog_status = 0
         explanation = "Successfully deleted DHCP lease for specified MAC address ({}) on specified server ({}) .".format(mac_address, self.config['omapi']['server'])
+        payload = {}
 
         try:
-            deleted_lease = self.client_omapi.del_host(mac_address)
+            payload['deleted_lease' = self.client_omapi.del_host(mac_address)
         except:
-            explanation = "n unknown error occurred while trying to add a DHCP lease for specified MAC address ({}) on specified IP address ({}) with specified name ({}) on specified server ({}) .".format(mac_address, ip_address, name,self.config['omapi']['server'])
-            return [ 1, 500, explanation, "" ]
+            explanation = "An unknown error occurred while trying to add a DHCP lease for specified MAC address ({}) on specified IP address ({}) with specified name ({}) on specified server ({}) .".format(mac_address, ip_address, name,self.config['omapi']['server'])
+            return { "prog_status": 1, "http_status": 500, "explanation": explanation, "payload": "" }
 
-        returns = [ prog_status, http_status, explanation, deleted_lease ]
+        returns = { "prog_status": prog_status, "http_status": http_status, "explanation": explanation, "payload": payload }
 
         return returns
 
@@ -71,13 +73,14 @@ class commands:
         http_status = 200
         prog_status = 0
         explanation = "Successfully listed DHCP lease for specified MAC address ({}) on specified server ({}) .".format(mac_address, self.config['omapi']['server'])
+        payload = {}
 
         try:
-            lease = self.client_omapi.lookup_ip_host(mac_address)
+            payload["lease_IP"] = self.client_omapi.lookup_ip_host(mac_address)
         except:
             explanation = "An unknown error occurred while trying to add a DHCP lease for specified MAC address ({}) on specified IP address ({}) with specified name on specified server.".format(mac_address, self.config['omapi']['server'])
-            return [ 1, 500, explanation, "" ]
+            return { "prog_status": 1, "http_status": 500, "explanation": explanation, "payload": "" }
 
-        returns = { "prog_status": prog_status, "http_status": http_status, "explanation": explanation, "payload": lease }
+        returns = { "prog_status": prog_status, "http_status": http_status, "explanation": explanation, "payload": payload }
 
         return returns
