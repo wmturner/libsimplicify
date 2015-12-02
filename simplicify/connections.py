@@ -182,3 +182,22 @@ class open:
         except:
             print "ERROR"
         return self.client_redis
+
+
+    def bind(self):
+        """
+        Note: This method opens a bind zone file using settings in input during class initialization
+
+        Args:
+            self.SimplicifyConfig: A configuration dictionary that is stored as a JSON file.  More documentation on individual configuration attirbutes is stored in the config.json file
+
+        Returns:
+            returns: On success this method returns an omapi client object
+
+        """
+
+        try:
+            self.client_redis = redis.Redis(host=self.SimplicifyConfig['redis']['host'], port=self.SimplicifyConfig['redis']['port'])
+        except:
+            print "ERROR"
+        return self.client_redis

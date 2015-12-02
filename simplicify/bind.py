@@ -16,12 +16,8 @@ from dns.exception import DNSException
 from dns.rdataclass import *
 from dns.rdatatype import *
 class commands:
-    def __init__(self, simplicify, provisioner_type):
-        self.provisioner_type = provisioner_type
-        self.client_etcd = simplicify.client_etcd
-        self.client_s3 = simplicify.client_s3
+    def __init__(self, simplicify):
         self.config = simplicify.SimplicifyConfig
-        self.hostname = socket.gethostname()
 
     def ls_SRV(self, service_name):
         """
@@ -133,8 +129,7 @@ class commands:
                 return [ 1, status, explanation, "" ]
 
         payload = ""
-        returns = [ prog_status, http_status, explanation, payload ]
-
+        returns = { "prog_status": prog_status, "http_status": http_status, "explanation": explanation, "payload": payload }
         return returns
 
     def create_SRV(self, service_name, service_port, A_record):
