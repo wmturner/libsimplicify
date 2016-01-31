@@ -49,7 +49,7 @@ class commands:
         payload = {}
 
         try:
-            payload['deleted_lease' = self.client_omapi.del_host(mac_address)
+            payload['deleted_lease'] = self.client_omapi.del_host(mac_address)
         except:
             explanation = "An unknown error occurred while trying to add a DHCP lease for specified MAC address ({}) on specified IP address ({}) with specified name ({}) on specified server ({}) .".format(mac_address, ip_address, name,self.config['omapi']['server'])
             return { "prog_status": 1, "http_status": 500, "explanation": explanation, "payload": "" }
