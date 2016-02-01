@@ -20,6 +20,6 @@ setup(name='simplicify',
           'pypureomapi',
           'redis',
           'flask',
-          'flask_resftul'
+          'flask-resftul'
       ],
       zip_safe=False)
