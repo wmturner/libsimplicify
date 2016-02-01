@@ -19,7 +19,6 @@ setup(name='simplicify',
           'python-etcd',
           'pypureomapi',
           'redis',
-          'flask',
           'flask-restful'
       ],
       zip_safe=False)
