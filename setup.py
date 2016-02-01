@@ -17,5 +17,6 @@ setup(name='simplicify',
           'boto',
           'dnspython',
           'python-etcd',
+          'pypureomapi'
       ],
       zip_safe=False)
