@@ -18,6 +18,7 @@ setup(name='simplicify',
           'dnspython',
           'python-etcd',
           'pypureomapi',
-          'redis'
+          'redis',
+          'flask'
       ],
       zip_safe=False)
